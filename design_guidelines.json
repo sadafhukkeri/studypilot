@@ -1,0 +1,114 @@
+{
+  "project_name": "StudyPilot",
+  "theme": "dark",
+  "archetype": "Hybrid 5/7 (Jewel & Luxury + Electric & Neon)",
+  "color_palette": {
+    "background": "#0a0a0f",
+    "surface": "#1a1a2a",
+    "card": "#111118",
+    "primary": "#4f6ef7",
+    "secondary": "#00c4cc",
+    "accent_gold": "#f5a623",
+    "text_primary": "#ffffff",
+    "text_secondary": "#a1a1aa",
+    "border": "rgba(255, 255, 255, 0.08)",
+    "glass_bg": "rgba(17, 17, 24, 0.6)"
+  },
+  "typography": {
+    "headings": {
+      "family": "Plus Jakarta Sans",
+      "weights": ["600", "700", "800"],
+      "tracking": "tracking-tight"
+    },
+    "body": {
+      "family": "DM Sans",
+      "weights": ["400", "500"],
+      "tracking": "tracking-normal"
+    },
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight",
+      "h3": "text-xl sm:text-2xl font-bold",
+      "body": "text-base leading-relaxed text-[#a1a1aa]",
+      "small": "text-sm uppercase tracking-[0.2em] font-medium text-[#00c4cc]"
+    }
+  },
+  "layout_and_spacing": {
+    "grid_system": "Bento Protocol - tight gaps for dashboards, wide asymmetrical for marketing",
+    "dashboard_grid": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6",
+    "marketing_grid": "grid-cols-1 md:grid-cols-8 lg:grid-cols-12 gap-8 md:gap-12",
+    "container_padding": "p-6 md:p-8 lg:p-12",
+    "card_padding": "p-6 md:p-8",
+    "radius": "rounded-2xl lg:rounded-3xl",
+    "desktop_only_enforcement": "Use min-w-[1024px] or standard responsive utilities ensuring desktop layout dominance. Hide mobile hamburger logic."
+  },
+  "surface_strategies": {
+    "glassmorphism": {
+      "backdrop_blur": "backdrop-blur-xl or backdrop-blur-2xl",
+      "background": "bg-[#111118]/60",
+      "border": "border border-white/10",
+      "shadow": "shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+    },
+    "glow_effects": {
+      "primary_glow": "shadow-[0_0_20px_rgba(79,110,247,0.3)] hover:shadow-[0_0_30px_rgba(79,110,247,0.5)]",
+      "teal_glow": "shadow-[0_0_20px_rgba(0,196,204,0.3)] hover:shadow-[0_0_30px_rgba(0,196,204,0.5)]",
+      "gold_glow": "shadow-[0_0_20px_rgba(245,166,35,0.3)]"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#4f6ef7] text-white rounded-xl px-6 py-3 font-medium hover:bg-[#3d59d4] hover:shadow-[0_0_20px_rgba(79,110,247,0.4)] transition-all duration-300",
+      "secondary": "bg-transparent border border-white/10 text-white rounded-xl px-6 py-3 font-medium hover:border-white/30 hover:bg-white/5 transition-all duration-300",
+      "accent": "bg-gradient-to-r from-[#4f6ef7] to-[#00c4cc] text-white rounded-xl px-6 py-3 font-medium hover:scale-105 transition-all duration-300"
+    },
+    "cards": {
+      "base": "bg-[#111118] border border-white/5 rounded-2xl p-6 hover:-translate-y-1 hover:border-white/20 transition-all duration-300",
+      "glass": "bg-[#111118]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:shadow-[0_0_30px_rgba(79,110,247,0.15)] transition-all duration-300",
+      "surface": "bg-[#1a1a2a] rounded-2xl p-6 shadow-inner border border-white/5"
+    },
+    "animations": {
+      "hover": "transition-all duration-300 ease-out",
+      "page_transition": "framer-motion initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -20}}",
+      "flashcard_flip": "perspective-1000 rotate-y-180 preserve-3d"
+    }
+  },
+  "media": {
+    "image_urls": [
+      {
+        "category": "hero_graphic",
+        "description": "Abstract floating 3D glass books with neon electric blue and teal glowing data streams",
+        "url": "https://static.prod-images.emergentagent.com/jobs/08888170-6c2f-493c-8280-6dacc6606bf6/images/32a5b904ffab926f3f93501f8c44d9d4638cd5285a1077b40d14933b44465178.png"
+      },
+      {
+        "category": "mascot",
+        "description": "Spark.E Mascot - cute friendly glowing robotic tutor with blue/teal accents",
+        "url": "https://static.prod-images.emergentagent.com/jobs/08888170-6c2f-493c-8280-6dacc6606bf6/images/60ac151ee6a23e8e0074f7a4d36e0c2c2734542576ebf15ba7bf57040a877979.png"
+      },
+      {
+        "category": "notes_ai",
+        "description": "Futuristic glowing notebook for Notes AI feature visualization",
+        "url": "https://static.prod-images.emergentagent.com/jobs/08888170-6c2f-493c-8280-6dacc6606bf6/images/2573dc0349af0651a20d549e8e9cdf9120af767d065dd8ca9acaec8d12baef5e.png"
+      },
+      {
+        "category": "arcade_mode",
+        "description": "3D gamepad with graduation cap for Gamified Arcade visualization",
+        "url": "https://static.prod-images.emergentagent.com/jobs/08888170-6c2f-493c-8280-6dacc6606bf6/images/59758a29f9b5b6e1a4c7998940c667a0eedc4f3572d7bca81a09572ba991b56d.png"
+      },
+      {
+        "category": "background_lifestyle",
+        "description": "Moody neon lighting student aesthetic background",
+        "url": "https://images.unsplash.com/photo-1759547454806-e2650a9d81f1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNDR8MHwxfHNlYXJjaHwxfHxzdHVkZW50JTIwc3R1ZHlpbmclMjBsYXRlJTIwbmlnaHQlMjBuZW9ufGVufDB8fHx8MTc3NzM3NjMyMHww&ixlib=rb-4.1.0&q=85"
+      }
+    ]
+  },
+  "specific_page_instructions": {
+    "landing": "Hero section must use the abstract 3D books graphic (hero_graphic). Apply a backdrop-blur-xl over the #0a0a0f background to give a deep spatial feel. Include testimonials in bento grid style with #111118 cards and #4f6ef7 glows on hover. The stats bar should use #f5a623 for numbers.",
+    "dashboard": "Use a persistent left sidebar. Main content area should use the dashboard bento grid. Drag-drop upload area must feature dashed borders with a subtle teal #00c4cc glow on hover. Recent study sets as glassmorphism cards.",
+    "study_set": "Render 5 tool cards with distinct icons (Notes, Flashcards, Quiz, Chat, Arcade). Use high contrast typography and subtle scale hover effects.",
+    "notes_ai": "Use Notes AI graphic. Provide depth toggles (Simple, Detailed, Expert) using Shadcn segmented controls customized to the dark theme.",
+    "flashcards": "MUST implement framer-motion 3D flip (rotateY). Use #1a1a2a for the card surface. Add a subtle border glow when flipping.",
+    "arcade": "The most gamified area. Use the arcade_mode_graphic in the header. Render 3 mini-game cards. Heavy use of the electric blue and gold highlights.",
+    "spark_e_chat": "Chatbot interface using the mascot graphic as the avatar. 3 tabs required. Use Shadcn Tabs component but customize to remove default Vercel look (e.g., use an underlined animated indicator or pill-shape with #4f6ef7 background)."
+  },
+  "testing": "All interactive and key informational elements MUST include a data-testid attribute formatted as kebab-case role-based names (e.g., data-testid='upload-dropzone', data-testid='flashcard-flip-btn', data-testid='arcade-mode-card')."
+}

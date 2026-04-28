@@ -35,11 +35,33 @@ Build a full-stack AI-powered education platform called "StudyPilot" — a clone
 - Components: Logo, Sidebar, AppShell, UploadDropzone, ProtectedRoute
 - Custom dark theme with Plus Jakarta Sans + DM Sans, glassmorphism, glow effects, framer-motion 3D flip
 
+## v2 — 2026-02 (rename + Indian-student features)
+### Renamed
+- All "StudyAI" → "StudyPilot"; all "Spark.E" → "StudyPilot AI"
+- Routes: `/sparke` → `/studypilotai`; meta titles/description updated; KaTeX CDN added
+
+### New backend endpoints (11)
+- `POST /api/studypilotai/voice` — multilingual text-in/text-out tutor (browser-based STT/TTS)
+- `POST /api/studypilotai/snap` — Claude-vision photo-to-doubt with KaTeX-rendered solutions
+- `POST /api/wellbeing/mood`, `GET /api/wellbeing/mood/history`
+- `GET /api/wellbeing/burnout-score` (deterministic formula)
+- `GET /api/wellbeing/daily-spark`, `POST /api/wellbeing/daily-spark/refresh`
+- `GET /api/wellbeing/streak` (current/longest/30-day heatmap)
+- `POST /api/reels/generate`, `GET /api/reels/{study_set_id}` (5 reels per set)
+- `POST /api/notes/explain-three-ways`
+
+### New frontend pages
+- VoiceTutorPage (Web Speech API STT/TTS, 7 Indian languages)
+- WellbeingPage (mood, burnout, daily spark, streak heatmap)
+- ReelsPage (vertical 390×693 reel feed, WhatsApp share)
+- SparkChatPage: added "Snap & Solve" 4th tab with KaTeX rendering
+- NotesPage: added "Explain it 3 ways" floating tooltip on text selection + side panel
+
 ## Backlog (P0/P1/P2)
 - P1: Streaming chat replies (currently full-response)
 - P1: True spaced-repetition algorithm based on difficulty taps
-- P1: Saved chat sessions list / resume past sessions
+- P2: Reel `force=true` regenerate flag
+- P2: Wellbeing timezone awareness for daily spark reset
+- P2: Saved chat sessions list / resume past sessions
 - P2: Export flashcards to Anki/CSV
-- P2: Share study set with link
-- P2: Stats: study streak, hours studied
-- P2: Share Score functionality from Arcade
+- P2: Share study set with public link

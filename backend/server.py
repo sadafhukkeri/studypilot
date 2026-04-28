@@ -536,7 +536,13 @@ async def studypilotai_voice(payload: models.VoiceChatRequest, user=Depends(curr
 # ==================== SNAP & SOLVE ====================
 @api.post("/studypilotai/snap")
 async def studypilotai_snap(payload: models.SnapSolveRequest, user=Depends(current_user)):
-    return await ai.snap_solve(payload.image_base64, payload.subject_hint or "")
+    try:
+        return await ai.snap_solve(payload.image_base64, payload.subject_hint or "")
+    except Exception as e:
+        msg = str(e)
+        if "image" in msg.lower() or "vision" in msg.lower() or "could not process" in msg.lower():
+            raise HTTPException(status_code=400, detail="Could not process image. Please retry with a clearer photo.")
+        raise HTTPException(status_code=500, detail=f"Snap & Solve failed: {msg[:120]}")
 
 
 # ==================== WELLBEING ====================

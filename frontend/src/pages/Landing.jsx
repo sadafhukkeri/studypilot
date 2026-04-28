@@ -14,13 +14,13 @@ const features = [
   { icon: FileText, title: "Notes AI", desc: "Auto-generated structured notes at any depth.", color: "#4f6ef7" },
   { icon: Zap, title: "Flashcards AI", desc: "Spaced-repetition cards that adapt to you.", color: "#00c4cc" },
   { icon: BookOpen, title: "Quizzes", desc: "Personalized quizzes with instant feedback.", color: "#f5a623" },
-  { icon: MessageCircle, title: "Spark.E Tutor", desc: "Chat with an AI tutor that knows your material.", color: "#4f6ef7" },
+  { icon: MessageCircle, title: "StudyPilot AI Tutor", desc: "Chat with an AI tutor that knows your material.", color: "#4f6ef7" },
   { icon: Gamepad2, title: "Arcade", desc: "Three game modes that turn study into play.", color: "#00c4cc" },
   { icon: Calendar, title: "Study Calendar", desc: "AI auto-schedules sessions around your exams.", color: "#f5a623" },
 ];
 
 const testimonials = [
-  { name: "Maya R.", role: "Med Student", text: "I went from cramming to confident. Spark.E literally changed how I revise.", stars: 5 },
+  { name: "Maya R.", role: "Med Student", text: "I went from cramming to confident. StudyPilot AI literally changed how I revise.", stars: 5 },
   { name: "Theo K.", role: "Law Student", text: "Uploaded a 200-page lecture pack and had flashcards in 30 seconds. Insane.", stars: 5 },
   { name: "Aiden P.", role: "CS Major", text: "Arcade mode makes studying actually fun. My grades agree.", stars: 5 },
 ];
@@ -94,7 +94,7 @@ export default function Landing() {
           <div className="absolute inset-0 bg-gradient-to-br from-[#4f6ef7]/20 to-[#00c4cc]/10 blur-3xl rounded-full" />
           <img
             src={HERO_IMG}
-            alt="StudyAI Hero"
+            alt="StudyPilot Hero"
             className="relative w-full rounded-3xl animate-float"
           />
         </div>
@@ -149,15 +149,15 @@ export default function Landing() {
         <div className="grid grid-cols-12 gap-12 items-center">
           <div className="col-span-5 relative">
             <div className="absolute inset-0 bg-gradient-radial from-[#4f6ef7]/30 to-transparent blur-3xl" />
-            <img src={MASCOT_IMG} alt="Spark.E mascot" className="relative w-full max-w-sm mx-auto animate-float" />
+            <img src={MASCOT_IMG} alt="StudyPilot AI mascot" className="relative w-full max-w-sm mx-auto animate-float" />
           </div>
           <div className="col-span-7">
-            <p className="text-xs uppercase tracking-[0.3em] text-[#f5a623] mb-3">Meet Spark.E</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-[#f5a623] mb-3">Meet StudyPilot AI</p>
             <h2 className="font-heading font-extrabold text-4xl lg:text-5xl mb-5 leading-tight">
               An AI tutor that actually knows your notes.
             </h2>
             <p className="text-white/60 text-lg leading-relaxed mb-6 max-w-xl">
-              Spark.E reads your uploaded material and answers questions, explains diagrams, even grades your essays — all grounded in your study set.
+              StudyPilot AI reads your uploaded material and answers questions, explains diagrams, even grades your essays — all grounded in your study set.
             </p>
             <ul className="space-y-3 text-white/80">
               <li className="flex items-center gap-3"><CheckCircle2 className="w-5 h-5 text-[#00c4cc]" /> Standard & Ultra Thinking modes</li>
@@ -201,7 +201,7 @@ export default function Landing() {
           <div className="absolute inset-0 bg-gradient-radial from-[#4f6ef7]/10 to-transparent" />
           <div className="relative">
             <h2 className="font-heading font-extrabold text-4xl lg:text-5xl mb-5">Start studying smarter today</h2>
-            <p className="text-white/60 mb-8 max-w-xl mx-auto">Join millions of students using StudyAI to ace their exams.</p>
+            <p className="text-white/60 mb-8 max-w-xl mx-auto">Join millions of students using StudyPilot to ace their exams.</p>
             <Link
               to="/signup"
               data-testid="bottom-cta"
@@ -217,7 +217,7 @@ export default function Landing() {
       <footer className="border-t border-white/5 py-10">
         <div className="max-w-7xl mx-auto px-8 flex items-center justify-between">
           <Logo size="sm" />
-          <p className="text-white/40 text-sm">© 2026 StudyAI · Made for students</p>
+          <p className="text-white/40 text-sm">© 2026 StudyPilot · Made for students</p>
           <div className="flex items-center gap-6 text-sm text-white/50">
             <a href="#" className="hover:text-white">Privacy</a>
             <a href="#" className="hover:text-white">Terms</a>

@@ -20,6 +20,9 @@ import ArcadeGamePage from "@/pages/ArcadeGamePage";
 import CalendarPage from "@/pages/CalendarPage";
 import StudySetsListPage from "@/pages/StudySetsListPage";
 import SettingsPage from "@/pages/SettingsPage";
+import VoiceTutorPage from "@/pages/VoiceTutorPage";
+import WellbeingPage from "@/pages/WellbeingPage";
+import ReelsPage from "@/pages/ReelsPage";
 
 function AppRouter() {
   const location = useLocation();
@@ -39,7 +42,10 @@ function AppRouter() {
       <Route path="/study-set/:id/flashcards" element={<ProtectedRoute><FlashcardsPage /></ProtectedRoute>} />
       <Route path="/study-set/:id/quiz" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
       <Route path="/study-set/:id/chat" element={<ProtectedRoute><SparkChatPage /></ProtectedRoute>} />
-      <Route path="/sparke" element={<ProtectedRoute><SparkChatPage /></ProtectedRoute>} />
+      <Route path="/studypilotai" element={<ProtectedRoute><SparkChatPage /></ProtectedRoute>} />
+      <Route path="/studypilotai/voice" element={<ProtectedRoute><VoiceTutorPage /></ProtectedRoute>} />
+      <Route path="/wellbeing" element={<ProtectedRoute><WellbeingPage /></ProtectedRoute>} />
+      <Route path="/study-set/:id/reels" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
       <Route path="/arcade" element={<ProtectedRoute><ArcadePage /></ProtectedRoute>} />
       <Route path="/arcade/play/:setId/:mode" element={<ProtectedRoute><ArcadeGamePage /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />

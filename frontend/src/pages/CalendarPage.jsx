@@ -149,7 +149,7 @@ export default function CalendarPage() {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowModal(false)}>
             <div onClick={(e) => e.stopPropagation()} className="bg-[#111118] border border-white/10 rounded-2xl p-8 w-full max-w-md" data-testid="exam-modal">
               <h3 className="font-heading font-bold text-2xl mb-2">Schedule study plan</h3>
-              <p className="text-white/60 text-sm mb-6">Spark.E will create study sessions backwards from the exam date.</p>
+              <p className="text-white/60 text-sm mb-6">StudyPilot AI will create study sessions backwards from the exam date.</p>
               <div className="space-y-4">
                 <div>
                   <label className="text-sm text-white/70 mb-1.5 block">Subject *</label>

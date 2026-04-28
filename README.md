@@ -11,7 +11,7 @@ A full-stack education platform that turns any uploaded document, slide deck, le
 - **Notes AI** — structured Markdown notes at 3 depths (Summarized / In-Depth / Comprehensive), exportable to PDF
 - **Flashcards** — 3D-flip animated cards with spaced-repetition difficulty tracking
 - **Quiz Generator** — 10 mixed MCQ + True/False questions with instant feedback and weak-topic analysis
-- **Spark.E Tutor** — ChatGPT-style assistant grounded in your study material; 3 tabs:
+- **StudyPilot AI Tutor** — ChatGPT-style assistant grounded in your study material; 3 tabs:
   - Chat (with Standard / Ultra Thinking modes, 20+ languages)
   - Image / Diagram Analyser (Claude vision)
   - Essay Grader (score, grammar issues, structure feedback, suggestions)
@@ -129,8 +129,8 @@ Visit [http://localhost:3000](http://localhost:3000), sign up via email or Googl
 | POST   | `/arcade/generate`                         | Generate game content (mode)         |
 | POST   | `/arcade/score`                            | Save arcade score                    |
 | GET    | `/arcade/leaderboard`                      | User's score history                 |
-| POST   | `/sparke/chat`                             | Chat with Spark.E                    |
-| POST   | `/sparke/image`                            | Image analyser                       |
+| POST   | `/studypilotai/chat`                             | Chat with StudyPilot AI                    |
+| POST   | `/studypilotai/image`                            | Image analyser                       |
 | POST   | `/essay/grade`                             | Essay grader                         |
 | POST   | `/calendar/schedule`                       | AI-schedule study plan               |
 | GET    | `/calendar/events`                         | List events                          |

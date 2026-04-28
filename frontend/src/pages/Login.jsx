@@ -42,7 +42,7 @@ export default function Login() {
             Welcome back. <br /> Your study tools <span className="gradient-text">await</span>.
           </h2>
           <p className="text-white/60 mt-5 leading-relaxed">
-            Pick up right where you left off. Your notes, flashcards, and Spark.E chats are saved.
+            Pick up right where you left off. Your notes, flashcards, and StudyPilot AI chats are saved.
           </p>
           <ul className="mt-8 space-y-3 text-white/80">
             <li className="flex items-center gap-3"><CheckCircle2 className="w-5 h-5 text-[#00c4cc]" /> Free forever tier</li>
@@ -56,7 +56,7 @@ export default function Login() {
         <div className="w-full max-w-md">
           <div className="lg:hidden mb-8"><Logo /></div>
           <h1 className="font-heading font-extrabold text-3xl mb-2 text-white">Log In</h1>
-          <p className="text-white/60 mb-8">Welcome back to StudyAI</p>
+          <p className="text-white/60 mb-8">Welcome back to StudyPilot</p>
 
           <button
             type="button"

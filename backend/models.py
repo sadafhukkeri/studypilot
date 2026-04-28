@@ -134,3 +134,25 @@ class CalendarEvent(BaseModel):
     duration_mins: int = 60
     type: Literal["session", "exam", "deadline"] = "session"
     topic: str = ""
+
+
+# ==================== NEW MODELS ====================
+class VoiceChatRequest(BaseModel):
+    study_set_id: str
+    transcript_user: str
+    language: str = "English"
+    session_id: str
+
+
+class SnapSolveRequest(BaseModel):
+    image_base64: str
+    subject_hint: Optional[str] = ""
+
+
+class MoodCheckinRequest(BaseModel):
+    mood: int  # 1-5
+    note: Optional[str] = ""
+
+
+class ExplainThreeWaysRequest(BaseModel):
+    text: str

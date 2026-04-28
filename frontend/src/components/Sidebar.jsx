@@ -1,14 +1,16 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
-import { Home, Library, MessageCircle, Gamepad2, Calendar, Settings, LogOut } from "lucide-react";
+import { Home, Library, MessageCircle, Mic, Gamepad2, Calendar, Heart, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const items = [
   { to: "/dashboard", label: "Home", icon: Home, testid: "nav-home" },
   { to: "/study-sets", label: "My Study Sets", icon: Library, testid: "nav-sets" },
-  { to: "/sparke", label: "Spark.E Chat", icon: MessageCircle, testid: "nav-sparke" },
+  { to: "/studypilotai", label: "StudyPilot AI Chat", icon: MessageCircle, testid: "nav-sparke" },
+  { to: "/studypilotai/voice", label: "Voice Tutor", icon: Mic, testid: "nav-voice" },
   { to: "/arcade", label: "Arcade", icon: Gamepad2, testid: "nav-arcade" },
   { to: "/calendar", label: "Study Calendar", icon: Calendar, testid: "nav-calendar" },
+  { to: "/wellbeing", label: "Wellbeing", icon: Heart, testid: "nav-wellbeing" },
   { to: "/settings", label: "Settings", icon: Settings, testid: "nav-settings" },
 ];
 

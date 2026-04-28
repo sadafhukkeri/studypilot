@@ -1,0 +1,48 @@
+{
+  "summary": "Validated all 11 NEW StudyPilot endpoints (voice, snap, mood, mood/history, burnout-score, daily-spark, daily-spark/refresh, streak, reels/generate, reels/{id}, explain-three-ways) end-to-end against live backend with fresh JWT signup. 15/15 pytest cases pass (includes auth guards + 404 sanity). All AI generations validated for response shape, key fields and data types. Full suite runs in ~65s.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/studypilotai/snap",
+        "issue": "Endpoint relies entirely on the user-supplied image being valid+large enough for Anthropic vision. A trivial 1x1 placeholder JPEG triggers an Anthropic 'Could not process image' error which surfaces to the client as HTTP 500 (uncaught ChatError). Recommend wrapping ai.snap_solve in try/except → 400 with friendly message so bad uploads don't look like server crashes."
+      },
+      {
+        "endpoint": "POST /api/wellbeing/mood",
+        "issue": "Stored `created_at` is an ISO string, but /wellbeing/burnout-score and /wellbeing/streak compare with $gte against an ISO string too — works because lex-order matches time-order for ISO Z strings, but mixing string and datetime types across collections is fragile. Consider standardising on datetime objects."
+      },
+      {
+        "endpoint": "POST /api/reels/generate",
+        "issue": "Short-circuits when reels already exist for the study_set (same pattern as flashcards). No way to regenerate without manual DB cleanup. Consider a force=true flag."
+      }
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_new_endpoints.py",
+    "/app/test_reports/pytest/pytest_new_endpoints.xml"
+  ],
+  "action_items": [
+    "Wrap ai.snap_solve() in try/except inside /api/studypilotai/snap and convert Anthropic image-validation failures into HTTP 400 with a clear message ('Could not process image, please retry with a clearer photo').",
+    "Optional: add force=true flag to /api/reels/generate to allow regeneration (currently returns cached reels if any exist).",
+    "Optional: enforce explicit datetime objects (not ISO strings) in wellbeing collections for safer date range queries."
+  ],
+  "critical_code_review_comments": [
+    "ai.py snap_solve: no error handling around vision call; any LLM/image error bubbles up as a generic 500. Add try/except.",
+    "server.py burnout-score: avg_per_day = sessions / 7.0 then score = avg*8 + ... — magic constants and integer score capped at 100, but no lower bound enforcement (negative not possible here, just noting). Document the formula.",
+    "server.py reels_generate: like flashcards, idempotency is implicit via 'if existing return existing' — good for cost but bad for UX when user wants new reels. Add explicit regenerate path.",
+    "server.py daily-spark uses calendar date string but no timezone consideration — user's local 'today' may differ from UTC, leading to spark resetting at unexpected times.",
+    "explain_three_ways trims input to 6000 chars in ai.py but server.py only checks len >= 10 — fine, just noting truncation is silent."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_new_endpoints.py",
+    "/app/test_reports/pytest/pytest_new_endpoints.xml"
+  ],
+  "success_rate": {"backend": "100% (15/15 new-endpoint tests)", "frontend": "not tested (backend-only request)"},
+  "test_credentials": "Per-run fresh signup: newep+{ts}_{rand}@example.com / TestPass123!",
+  "seed_data_creation": "Per-run: 1 user, 1 study set (Photosynthesis TXT, ~700 chars), 1 mood checkin, 1 daily spark, 5 reels for the study set. All keyed to throwaway user.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Two pytest files now exist: /app/backend/tests/test_studypilot_api.py (original 25 tests, all passing per iteration_1) and /app/backend/tests/test_new_endpoints.py (15 new-endpoint tests, all passing). Both are idempotent (fresh signup per run) and reuse the auth.py fix from iteration_1. Snap test uses an in-memory PIL-generated 300x100 JPEG (Pillow is already installed) — Claude vision rejects images that are too small, so DO NOT shrink it. AI endpoints take 5-90s each; 120s timeout is safe. Always export REACT_APP_BACKEND_URL when running pytest manually since /app/backend/.env does not contain it.",
+  "rca of the issue": "No new bugs surfaced. Two transient failures in the first run (snap → 500 from Anthropic 'Could not process image' on a 1x1 placeholder JPEG; daily-spark/refresh → 502 preview gateway timeout) were both addressed at the test layer: snap test now generates a valid 300x100 PIL JPEG, and the gateway recovered on retry. Production code path for /studypilotai/snap should still be hardened to convert vision-validation errors into HTTP 400 instead of 500."
+}

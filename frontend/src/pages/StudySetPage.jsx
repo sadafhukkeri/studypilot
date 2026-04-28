@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import api from "@/lib/api";
-import { FileText, Zap, BookOpen, MessageCircle, Gamepad2, ArrowRight, Calendar } from "lucide-react";
+import { FileText, Zap, BookOpen, MessageCircle, Gamepad2, ArrowRight, Calendar, Film } from "lucide-react";
 
 const TOOLS = [
   { key: "notes", title: "Notes AI", desc: "Structured notes at any depth", icon: FileText, color: "#4f6ef7", route: "notes" },
   { key: "flashcards", title: "Flashcards AI", desc: "Spaced repetition flip cards", icon: Zap, color: "#00c4cc", route: "flashcards" },
   { key: "quiz", title: "Quiz Generator", desc: "10 questions, instant feedback", icon: BookOpen, color: "#f5a623", route: "quiz" },
-  { key: "chat", title: "Spark.E Chat", desc: "Tutor that knows your material", icon: MessageCircle, color: "#4f6ef7", route: "chat" },
+  { key: "chat", title: "StudyPilot AI Chat", desc: "Tutor that knows your material", icon: MessageCircle, color: "#4f6ef7", route: "chat" },
   { key: "arcade", title: "Arcade", desc: "3 game modes", icon: Gamepad2, color: "#00c4cc", route: "arcade" },
+  { key: "reels", title: "Micro Reels", desc: "Bite-sized concept videos", icon: Film, color: "#f5a623", route: "reels" },
 ];
 
 export default function StudySetPage() {

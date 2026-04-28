@@ -28,7 +28,7 @@ export default function Signup() {
     setBusy(true);
     try {
       await signupEmail(email, password, name);
-      toast.success("Account created! Welcome to StudyAI");
+      toast.success("Account created! Welcome to StudyPilot");
       navigate("/dashboard");
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Signup failed");

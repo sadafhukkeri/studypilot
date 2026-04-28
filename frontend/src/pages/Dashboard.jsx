@@ -29,9 +29,9 @@ export default function Dashboard() {
   const onUploadDone = () => load();
 
   const checklist = [
-    { done: !!user, label: "Sign up for StudyAI" },
+    { done: !!user, label: "Sign up for StudyPilot" },
     { done: sets.length > 0, label: "Upload your first study set" },
-    { done: false, label: "Try Spark.E Tutor" },
+    { done: false, label: "Try StudyPilot AI Tutor" },
     { done: false, label: "Play an Arcade game" },
   ];
 
@@ -48,11 +48,11 @@ export default function Dashboard() {
             <p className="text-white/60 mt-2">Let's keep learning. Upload anything to get started.</p>
           </div>
           <Link
-            to="/sparke"
+            to="/studypilotai"
             data-testid="quick-sparke-btn"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white hover:border-[#4f6ef7]/50 hover:bg-[#4f6ef7]/10 transition"
           >
-            <Sparkles className="w-4 h-4 text-[#00c4cc]" /> Ask Spark.E
+            <Sparkles className="w-4 h-4 text-[#00c4cc]" /> Ask StudyPilot AI
           </Link>
         </div>
 
@@ -107,10 +107,10 @@ export default function Dashboard() {
           {/* Onboarding sidebar */}
           <div className="bg-gradient-to-br from-[#4f6ef7]/10 via-[#111118] to-[#00c4cc]/5 border border-white/10 rounded-2xl p-6">
             <div className="flex items-center gap-3 mb-4">
-              <img src={MASCOT_IMG} alt="Spark.E" className="w-12 h-12" />
+              <img src={MASCOT_IMG} alt="StudyPilot AI" className="w-12 h-12" />
               <div>
                 <h3 className="font-heading font-bold text-white">Get started</h3>
-                <p className="text-white/50 text-xs">Spark.E's tour</p>
+                <p className="text-white/50 text-xs">StudyPilot AI's tour</p>
               </div>
             </div>
             <ul className="space-y-3">

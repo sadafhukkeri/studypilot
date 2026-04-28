@@ -2,17 +2,20 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import api from "@/lib/api";
-import { Send, MessageCircle, Image as ImageIcon, FileText, ArrowLeft, Loader2, Plus, Sparkles } from "lucide-react";
+import { Send, MessageCircle, Image as ImageIcon, FileText, Camera, ArrowLeft, Loader2, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 const MASCOT_IMG = "https://static.prod-images.emergentagent.com/jobs/08888170-6c2f-493c-8280-6dacc6606bf6/images/60ac151ee6a23e8e0074f7a4d36e0c2c2734542576ebf15ba7bf57040a877979.png";
 
 const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Dutch", "Russian", "Chinese", "Japanese", "Korean", "Arabic", "Hindi", "Turkish", "Polish", "Swedish", "Greek", "Hebrew", "Vietnamese", "Indonesian"];
 
+const SUBJECTS = ["", "Maths", "Physics", "Chemistry", "Biology", "History", "Geography", "Economics", "English", "Computer Science"];
+
 const TABS = [
   { key: "chat", label: "Chat", icon: MessageCircle },
   { key: "image", label: "Image Analyser", icon: ImageIcon },
   { key: "essay", label: "Essay Grader", icon: FileText },
+  { key: "snap", label: "Snap & Solve", icon: Camera },
 ];
 
 export default function SparkChatPage() {
@@ -31,6 +34,10 @@ export default function SparkChatPage() {
   const [imageReply, setImageReply] = useState("");
   const [essay, setEssay] = useState("");
   const [essayResult, setEssayResult] = useState(null);
+  // Snap & Solve state
+  const [snapImage, setSnapImage] = useState("");
+  const [snapSubject, setSnapSubject] = useState("");
+  const [snapResult, setSnapResult] = useState(null);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -58,7 +65,7 @@ export default function SparkChatPage() {
     setInput("");
     setBusy(true);
     try {
-      const { data } = await api.post("/sparke/chat", {
+      const { data } = await api.post("/studypilotai/chat", {
         study_set_id: activeSetId,
         message: userMsg.message,
         session_id: sessionId,
@@ -93,7 +100,7 @@ export default function SparkChatPage() {
     if (!imageBase64) return toast.error("Pick an image first");
     setBusy(true); setImageReply("");
     try {
-      const { data } = await api.post("/sparke/image", {
+      const { data } = await api.post("/studypilotai/image", {
         study_set_id: activeSetId || null,
         image_base64: imageBase64,
         prompt: "Explain what this image/diagram shows in detail for a student.",
@@ -119,6 +126,39 @@ export default function SparkChatPage() {
     }
   };
 
+  const onSnapPick = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => setSnapImage(reader.result.split(",")[1]);
+    reader.readAsDataURL(f);
+  };
+
+  const solveSnap = async () => {
+    if (!snapImage) return toast.error("Pick an image first");
+    setBusy(true); setSnapResult(null);
+    try {
+      const { data } = await api.post("/studypilotai/snap", { image_base64: snapImage, subject_hint: snapSubject });
+      setSnapResult(data);
+      // Render KaTeX after a tick
+      setTimeout(() => {
+        if (window.katex) {
+          document.querySelectorAll("[data-katex]").forEach((el) => {
+            try {
+              const tex = el.getAttribute("data-katex");
+              const display = el.getAttribute("data-display") === "true";
+              window.katex.render(tex, el, { throwOnError: false, displayMode: display });
+            } catch {}
+          });
+        }
+      }, 100);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <AppShell>
       <div className="p-8 max-w-6xl">
@@ -128,9 +168,9 @@ export default function SparkChatPage() {
           </Link>
         )}
         <div className="flex items-center gap-3 mb-2">
-          <img src={MASCOT_IMG} alt="Spark.E" className="w-12 h-12" />
+          <img src={MASCOT_IMG} alt="StudyPilot AI" className="w-12 h-12" />
           <div>
-            <h1 className="font-heading font-extrabold text-3xl">Spark.E</h1>
+            <h1 className="font-heading font-extrabold text-3xl">StudyPilot AI</h1>
             <p className="text-white/60 text-sm">Your AI tutor that knows your study material</p>
           </div>
         </div>
@@ -185,7 +225,7 @@ export default function SparkChatPage() {
               {messages.length === 0 && (
                 <div className="text-center text-white/50 py-20">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 text-[#4f6ef7]" />
-                  <p>Ask Spark.E anything about <strong className="text-white">{studySet?.title || "your study set"}</strong>.</p>
+                  <p>Ask StudyPilot AI anything about <strong className="text-white">{studySet?.title || "your study set"}</strong>.</p>
                 </div>
               )}
               {messages.map((m, i) => (
@@ -198,7 +238,7 @@ export default function SparkChatPage() {
               {busy && (
                 <div className="flex justify-start">
                   <div className="px-4 py-3 rounded-2xl bg-[#1a1a2a] border border-white/10 text-white/60 text-sm flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Spark.E is thinking...
+                    <Loader2 className="w-4 h-4 animate-spin" /> StudyPilot AI is thinking...
                   </div>
                 </div>
               )}
@@ -223,7 +263,7 @@ export default function SparkChatPage() {
         {tab === "image" && (
           <div className="bg-[#111118]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-8" data-testid="image-tab">
             <h3 className="font-heading font-bold text-xl mb-4">Image / Diagram Analyser</h3>
-            <p className="text-white/60 text-sm mb-6">Upload a diagram or image — Spark.E will explain it.</p>
+            <p className="text-white/60 text-sm mb-6">Upload a diagram or image — StudyPilot AI will explain it.</p>
             <input type="file" accept="image/*" onChange={onImagePick} data-testid="image-file-input" className="block w-full text-white/70 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-[#4f6ef7] file:text-white file:cursor-pointer" />
             {imageBase64 && (
               <img src={`data:image/png;base64,${imageBase64}`} alt="preview" className="mt-4 max-h-64 rounded-xl border border-white/10" />
@@ -282,7 +322,98 @@ export default function SparkChatPage() {
             )}
           </div>
         )}
+
+        {/* Snap & Solve tab */}
+        {tab === "snap" && (
+          <div className="bg-[#111118]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-8" data-testid="snap-tab">
+            <h3 className="font-heading font-bold text-xl mb-2">Snap & Solve</h3>
+            <p className="text-white/60 text-sm mb-6">Photograph a textbook problem, handwritten question, or diagram — get a step-by-step solution.</p>
+            <div className="flex items-center gap-3 mb-4">
+              <select
+                value={snapSubject}
+                onChange={(e) => setSnapSubject(e.target.value)}
+                data-testid="snap-subject"
+                className="px-4 py-2.5 rounded-xl bg-[#1a1a2a] border border-white/10 text-white focus:border-[#4f6ef7] focus:outline-none"
+              >
+                <option value="">Subject hint (optional)</option>
+                {SUBJECTS.filter(Boolean).map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <input type="file" accept="image/*" onChange={onSnapPick} data-testid="snap-file-input" className="block w-full text-white/70 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-[#4f6ef7] file:text-white file:cursor-pointer" />
+            {snapImage && <img src={`data:image/png;base64,${snapImage}`} alt="problem" className="mt-4 max-h-72 rounded-xl border border-white/10" />}
+            <button onClick={solveSnap} disabled={busy || !snapImage} data-testid="snap-solve-btn" className="mt-4 px-6 py-3 rounded-xl bg-gradient-to-r from-[#4f6ef7] to-[#f5a623] text-white disabled:opacity-40 transition">
+              {busy ? "Solving..." : "Solve it"}
+            </button>
+
+            {snapResult && (
+              <div className="mt-6 space-y-4" data-testid="snap-result">
+                <div className="bg-[#1a1a2a] rounded-xl p-6">
+                  <p className="text-xs uppercase tracking-widest text-[#00c4cc] mb-2">Identified problem</p>
+                  <KatexRender text={snapResult.problem_extracted} />
+                </div>
+                <div className="bg-[#1a1a2a] rounded-xl p-6">
+                  <p className="text-xs uppercase tracking-widest text-[#4f6ef7] mb-3">Step-by-step solution</p>
+                  <ol className="space-y-3 text-white/85">
+                    {(snapResult.solution_steps || []).map((s, i) => (
+                      <li key={i} className="flex gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#4f6ef7] text-white text-xs flex items-center justify-center font-bold">{i + 1}</span>
+                        <KatexRender text={s} />
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+                <div className="bg-gradient-to-br from-[#f5a623]/15 to-[#4f6ef7]/5 border border-[#f5a623]/30 rounded-xl p-6">
+                  <p className="text-xs uppercase tracking-widest text-[#f5a623] mb-2">This problem tests</p>
+                  <p className="text-white font-semibold text-lg">{snapResult.concept_tested}</p>
+                </div>
+                <div className="bg-[#1a1a2a] rounded-xl p-6">
+                  <p className="text-xs uppercase tracking-widest text-[#00c4cc] mb-3">Similar practice questions</p>
+                  <ul className="space-y-3 text-white/85">
+                    {(snapResult.similar_questions || []).map((q, i) => (
+                      <li key={i} className="flex gap-3 items-start">
+                        <span className="text-[#00c4cc]">→</span>
+                        <KatexRender text={q} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </AppShell>
   );
+}
+
+// Render text containing $...$ inline math and $$...$$ display math via KaTeX
+function KatexRender({ text }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current || !text) return;
+    const html = renderKatexText(text);
+    ref.current.innerHTML = html;
+  }, [text]);
+  return <div ref={ref} className="text-white/90 leading-relaxed" />;
+}
+
+function renderKatexText(text) {
+  if (!text) return "";
+  const escape = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // Display: $$...$$
+  let out = text.replace(/\$\$([^$]+)\$\$/g, (m, tex) => {
+    if (window.katex) {
+      try { return window.katex.renderToString(tex, { displayMode: true, throwOnError: false }); } catch { return escape(m); }
+    }
+    return escape(m);
+  });
+  // Inline: $...$
+  out = out.replace(/\$([^$]+)\$/g, (m, tex) => {
+    if (window.katex) {
+      try { return window.katex.renderToString(tex, { displayMode: false, throwOnError: false }); } catch { return escape(m); }
+    }
+    return escape(m);
+  });
+  // Newlines to <br>
+  return out.replace(/\n/g, "<br/>");
 }

@@ -145,7 +145,7 @@ async def chat_with_context(
 ) -> str:
     style = "Think step-by-step deeply, show reasoning, give thorough answers." if ultra else "Be concise and helpful."
     system = (
-        f"You are Spark.E, a friendly AI tutor for StudyPilot. Answer ONLY based on the provided "
+        f"You are StudyPilot AI, a friendly AI tutor for StudyPilot. Answer ONLY based on the provided "
         f"study material below. If the question is outside the material, say so politely and suggest "
         f"related topics from the material. Always answer in {language}. {style}\n\n"
         f"=== STUDY MATERIAL ===\n{_truncate(raw_text, 50000)}\n=== END MATERIAL ==="
@@ -155,14 +155,14 @@ async def chat_with_context(
     history_text = ""
     if history:
         for h in history[-10:]:
-            role = "User" if h.get("role") == "user" else "Spark.E"
+            role = "User" if h.get("role") == "user" else "StudyPilot AI"
             history_text += f"{role}: {h.get('message','')}\n"
     full_msg = f"{history_text}User: {user_message}" if history_text else user_message
     return await chat.send_message(UserMessage(text=full_msg))
 
 
 async def analyse_image(image_base64: str, prompt: str) -> str:
-    system = "You are Spark.E, a study assistant. Analyse images for educational purposes."
+    system = "You are StudyPilot AI, a study assistant. Analyse images for educational purposes."
     chat = _make_chat(system)
     # Strip data URL prefix if present
     if "," in image_base64 and image_base64.startswith("data:"):
@@ -196,4 +196,89 @@ async def schedule_study_plan(subject: str, exam_date: str, raw_text: str = "") 
         text=f"Create a backwards study plan from today (start spread sessions out) until exam_date={exam_date} "
         f"for subject={subject}. Include 6-10 sessions, 45-90 mins each, with specific topics.{extra}\n\nJSON only."
     )
+    return _extract_json(await chat.send_message(msg))
+
+
+# ==================== NEW HELPERS ====================
+async def voice_chat(raw_text: str, message: str, language: str, session_id: str) -> str:
+    system = (
+        f"You are StudyPilot AI, a friendly tutor. Answer the student's spoken question in {language} "
+        f"based ONLY on the provided study material. Keep replies CONVERSATIONAL and concise (under 80 words) "
+        f"so they can be spoken aloud.\n\n=== MATERIAL ===\n{_truncate(raw_text, 30000)}\n=== END ==="
+    )
+    chat = _make_chat(system, session_id=session_id)
+    return await chat.send_message(UserMessage(text=message))
+
+
+async def snap_solve(image_base64: str, subject_hint: str = "") -> dict:
+    system = (
+        "You are a problem-solving tutor. Output ONLY JSON: "
+        "{\"problem_extracted\": str, \"solution_steps\": [str], "
+        "\"concept_tested\": str, \"similar_questions\": [str]}. "
+        "Use LaTeX inside $...$ or $$...$$ for math expressions."
+    )
+    chat = _make_chat(system)
+    if "," in image_base64 and image_base64.startswith("data:"):
+        image_base64 = image_base64.split(",", 1)[1]
+    img = ImageContent(image_base64=image_base64)
+    hint = f" Subject hint: {subject_hint}." if subject_hint else ""
+    msg = UserMessage(
+        text=f"Identify the problem in this image and solve it step-by-step.{hint} "
+        f"Then identify the core concept tested and generate 3 similar practice questions.\n\nOutput JSON only.",
+        file_contents=[img],
+    )
+    return _extract_json(await chat.send_message(msg))
+
+
+async def mood_response(mood_label: str, note: str, name: str = "") -> str:
+    system = (
+        "You are a warm, supportive study companion. In 2-3 short sentences, respond to a student's mood "
+        "check-in. Be empathetic, never preachy. End with one tiny actionable nudge."
+    )
+    chat = _make_chat(system)
+    name_part = f" (their name is {name})" if name else ""
+    note_part = f" They added: \"{note}\"." if note else ""
+    msg = UserMessage(text=f"Student mood: {mood_label}.{note_part}{name_part}")
+    return await chat.send_message(msg)
+
+
+async def daily_spark(name: str, subject: str = "") -> str:
+    system = "You are an upbeat motivational coach for students. Output ONE energetic 1-2 sentence message."
+    chat = _make_chat(system)
+    subj = f" who is studying {subject}" if subject else ""
+    msg = UserMessage(text=f"Write today's motivational spark for {name or 'a student'}{subj}. Make it specific and warm.")
+    return await chat.send_message(msg)
+
+
+async def burnout_suggestions() -> List[str]:
+    system = "Output ONLY JSON array of 3 short, actionable, kind suggestions (each <15 words) for a burned-out student."
+    chat = _make_chat(system)
+    return _extract_json(await chat.send_message(UserMessage(text="Generate 3 burnout-relief suggestions.")))
+
+
+async def generate_reels(raw_text: str, n: int = 5) -> List[dict]:
+    system = (
+        "Output ONLY JSON array. Each reel: "
+        "{\"title\": str, \"hook\": str (1 attention sentence), "
+        "\"points\": [3-5 short engaging strings], \"analogy\": str (real-life example), "
+        "\"takeaway\": str (1 sentence), \"script_text\": str (the full script glued together for sharing)}."
+    )
+    chat = _make_chat(system)
+    msg = UserMessage(
+        text=f"Create exactly {n} micro-learning reel scripts from this content. "
+        f"Each should explain ONE key concept in TikTok/Reels style: catchy hook, 3-5 punchy points, "
+        f"a real-life analogy, and one takeaway. Make them simple, engaging, student-friendly.\n\n"
+        f"{_truncate(raw_text, 30000)}\n\nJSON only."
+    )
+    return _extract_json(await chat.send_message(msg))
+
+
+async def explain_three_ways(text: str) -> dict:
+    system = (
+        "Output ONLY JSON: {\"simple\": str (explain like I'm 12, 2-3 sentences), "
+        "\"exam\": str (exam-ready precise answer, 3-4 sentences), "
+        "\"advanced\": str (deeper expert-level nuance, 4-5 sentences)}."
+    )
+    chat = _make_chat(system)
+    msg = UserMessage(text=f"Explain this in 3 ways:\n\n{text[:6000]}\n\nJSON only.")
     return _extract_json(await chat.send_message(msg))

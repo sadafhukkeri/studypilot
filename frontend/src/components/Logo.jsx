@@ -14,7 +14,7 @@ export function Logo({ size = "md" }) {
         <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#4f6ef7] to-[#00c4cc] blur-md opacity-50 -z-10" />
       </div>
       <span className={`font-heading font-extrabold ${sizes[size]} tracking-tight text-white`}>
-        Study<span className="gradient-text">AI</span>
+        Study<span className="gradient-text">Pilot</span>
       </span>
     </Link>
   );

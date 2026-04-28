@@ -518,6 +518,236 @@ async def calendar_delete(event_id: str, user=Depends(current_user)):
     return {"ok": True}
 
 
+# ==================== VOICE TUTOR ====================
+@api.post("/studypilotai/voice")
+async def studypilotai_voice(payload: models.VoiceChatRequest, user=Depends(current_user)):
+    s = await _get_set(payload.study_set_id, user["user_id"])
+    reply = await ai.voice_chat(s["raw_text"], payload.transcript_user, payload.language, payload.session_id)
+    now = _utcnow().isoformat()
+    await db.chats.insert_many([
+        {"user_id": user["user_id"], "session_id": payload.session_id, "study_set_id": payload.study_set_id,
+         "role": "user", "message": payload.transcript_user, "created_at": now, "channel": "voice"},
+        {"user_id": user["user_id"], "session_id": payload.session_id, "study_set_id": payload.study_set_id,
+         "role": "assistant", "message": reply, "created_at": now, "channel": "voice"},
+    ])
+    return {"transcript_user": payload.transcript_user, "response_text": reply, "language_used": payload.language}
+
+
+# ==================== SNAP & SOLVE ====================
+@api.post("/studypilotai/snap")
+async def studypilotai_snap(payload: models.SnapSolveRequest, user=Depends(current_user)):
+    return await ai.snap_solve(payload.image_base64, payload.subject_hint or "")
+
+
+# ==================== WELLBEING ====================
+MOOD_LABELS = {1: "Struggling", 2: "Stressed", 3: "Okay", 4: "Good", 5: "Great"}
+
+
+@api.post("/wellbeing/mood")
+async def wellbeing_mood(payload: models.MoodCheckinRequest, user=Depends(current_user)):
+    label = MOOD_LABELS.get(payload.mood, "Okay")
+    response = await ai.mood_response(label, payload.note or "", user.get("name", ""))
+    doc = {
+        "id": f"mood_{uuid.uuid4().hex[:10]}",
+        "user_id": user["user_id"],
+        "mood": payload.mood,
+        "mood_label": label,
+        "note": payload.note or "",
+        "ai_response": response,
+        "created_at": _utcnow().isoformat(),
+    }
+    await db.mood_checkins.insert_one(doc)
+    return {"ai_response": response, "mood_label": label}
+
+
+@api.get("/wellbeing/mood/history")
+async def wellbeing_mood_history(user=Depends(current_user)):
+    items = await db.mood_checkins.find(
+        {"user_id": user["user_id"]}, {"_id": 0}
+    ).sort("created_at", -1).limit(30).to_list(30)
+    return items
+
+
+@api.get("/wellbeing/burnout-score")
+async def wellbeing_burnout(user=Depends(current_user)):
+    uid = user["user_id"]
+    now = _utcnow()
+    seven_ago = (now - timedelta(days=7)).isoformat()
+
+    chat_count = await db.chats.count_documents({"user_id": uid, "created_at": {"$gte": seven_ago}, "role": "user"})
+    quiz_count = await db.quiz_attempts.count_documents({"user_id": uid, "created_at": {"$gte": seven_ago}})
+    arcade_count = await db.arcade_scores.count_documents({"user_id": uid, "created_at": {"$gte": seven_ago}})
+    mood_low = await db.mood_checkins.count_documents({"user_id": uid, "created_at": {"$gte": seven_ago}, "mood": {"$lte": 2}})
+    again_count = await db.flashcards.count_documents({"difficulty": "again"})
+
+    sessions = chat_count + quiz_count + arcade_count
+    # Activity heat = sessions per day average
+    avg_per_day = sessions / 7.0
+    # Score 0-100, higher = more risk
+    score = min(int(avg_per_day * 8 + mood_low * 12 + min(again_count, 20) * 1.5), 100)
+
+    if score >= 70:
+        state = "burnout"
+    elif score >= 40:
+        state = "caution"
+    else:
+        state = "healthy"
+
+    suggestions = []
+    if state == "burnout":
+        try:
+            suggestions = await ai.burnout_suggestions()
+        except Exception:
+            suggestions = [
+                "Take a 20-minute walk away from your screen.",
+                "Skip one study session today and rest fully.",
+                "Talk to a friend or family member about how you feel.",
+            ]
+
+    return {
+        "score": score,
+        "state": state,
+        "sessions_last_7d": sessions,
+        "low_mood_count": mood_low,
+        "suggestions": suggestions,
+    }
+
+
+@api.get("/wellbeing/daily-spark")
+async def wellbeing_daily_spark(user=Depends(current_user)):
+    today = _utcnow().date().isoformat()
+    cached = await db.daily_sparks.find_one(
+        {"user_id": user["user_id"], "date": today}, {"_id": 0}
+    )
+    if cached:
+        return {"message": cached["message"], "date": today}
+    # Get most recent study set subject
+    last = await db.study_sets.find_one(
+        {"user_id": user["user_id"]}, {"_id": 0, "subject": 1}, sort=[("created_at", -1)]
+    )
+    subject = last.get("subject", "") if last else ""
+    msg = await ai.daily_spark(user.get("name", ""), subject)
+    await db.daily_sparks.insert_one({"user_id": user["user_id"], "date": today, "message": msg})
+    return {"message": msg, "date": today}
+
+
+@api.post("/wellbeing/daily-spark/refresh")
+async def wellbeing_daily_spark_refresh(user=Depends(current_user)):
+    today = _utcnow().date().isoformat()
+    last = await db.study_sets.find_one(
+        {"user_id": user["user_id"]}, {"_id": 0, "subject": 1}, sort=[("created_at", -1)]
+    )
+    subject = last.get("subject", "") if last else ""
+    msg = await ai.daily_spark(user.get("name", ""), subject)
+    await db.daily_sparks.update_one(
+        {"user_id": user["user_id"], "date": today},
+        {"$set": {"message": msg}},
+        upsert=True,
+    )
+    return {"message": msg, "date": today}
+
+
+@api.get("/wellbeing/streak")
+async def wellbeing_streak(user=Depends(current_user)):
+    uid = user["user_id"]
+    now = _utcnow()
+    thirty_ago = now - timedelta(days=30)
+    # Pull all activity timestamps in last 30 days from key collections
+    cursors = [
+        db.chats.find({"user_id": uid, "created_at": {"$gte": thirty_ago.isoformat()}}, {"_id": 0, "created_at": 1}),
+        db.quiz_attempts.find({"user_id": uid, "created_at": {"$gte": thirty_ago.isoformat()}}, {"_id": 0, "created_at": 1}),
+        db.arcade_scores.find({"user_id": uid, "created_at": {"$gte": thirty_ago.isoformat()}}, {"_id": 0, "created_at": 1}),
+        db.mood_checkins.find({"user_id": uid, "created_at": {"$gte": thirty_ago.isoformat()}}, {"_id": 0, "created_at": 1}),
+        db.study_sets.find({"user_id": uid, "created_at": {"$gte": thirty_ago.isoformat()}}, {"_id": 0, "created_at": 1}),
+    ]
+    days_set = set()
+    daily_counts = {}
+    for cur in cursors:
+        async for d in cur:
+            ts = d.get("created_at")
+            if not ts:
+                continue
+            try:
+                day = ts[:10]
+                days_set.add(day)
+                daily_counts[day] = daily_counts.get(day, 0) + 1
+            except Exception:
+                pass
+    # Streak: consecutive days from today backwards
+    today = now.date()
+    streak = 0
+    for i in range(60):
+        d = (today - timedelta(days=i)).isoformat()
+        if d in days_set:
+            streak += 1
+        else:
+            if i == 0:
+                # Allow today gap; check yesterday
+                continue
+            break
+    # Longest streak in last 60 days
+    longest = 0
+    cur_run = 0
+    for i in range(60):
+        d = (today - timedelta(days=i)).isoformat()
+        if d in days_set:
+            cur_run += 1
+            longest = max(longest, cur_run)
+        else:
+            cur_run = 0
+    # 30-day heatmap
+    heatmap = []
+    for i in range(29, -1, -1):
+        d = (today - timedelta(days=i)).isoformat()
+        heatmap.append({"date": d, "count": daily_counts.get(d, 0)})
+    return {"current_streak": streak, "longest_streak": longest, "heatmap": heatmap}
+
+
+# ==================== REELS ====================
+@api.post("/reels/generate")
+async def reels_generate(payload: models.GenerateRequest, user=Depends(current_user)):
+    s = await _get_set(payload.study_set_id, user["user_id"])
+    existing = await db.reels.find(
+        {"study_set_id": payload.study_set_id}, {"_id": 0}
+    ).to_list(50)
+    if existing:
+        return {"reels": existing}
+    items = await ai.generate_reels(s["raw_text"], n=5)
+    reels = []
+    now = _utcnow().isoformat()
+    for it in items:
+        reels.append({
+            "id": f"reel_{uuid.uuid4().hex[:10]}",
+            "study_set_id": payload.study_set_id,
+            "title": it.get("title", ""),
+            "hook": it.get("hook", ""),
+            "points": it.get("points", []),
+            "analogy": it.get("analogy", ""),
+            "takeaway": it.get("takeaway", ""),
+            "script_text": it.get("script_text", ""),
+            "created_at": now,
+        })
+    if reels:
+        await db.reels.insert_many([{**r} for r in reels])
+    out = await db.reels.find({"study_set_id": payload.study_set_id}, {"_id": 0}).to_list(50)
+    return {"reels": out}
+
+
+@api.get("/reels/{study_set_id}")
+async def reels_list(study_set_id: str, user=Depends(current_user)):
+    await _get_set(study_set_id, user["user_id"])
+    out = await db.reels.find({"study_set_id": study_set_id}, {"_id": 0}).to_list(50)
+    return {"reels": out}
+
+
+# ==================== EXPLAIN THREE WAYS ====================
+@api.post("/notes/explain-three-ways")
+async def notes_explain_three_ways(payload: models.ExplainThreeWaysRequest, user=Depends(current_user)):
+    if len(payload.text.strip()) < 10:
+        raise HTTPException(status_code=400, detail="Text too short")
+    return await ai.explain_three_ways(payload.text)
+
+
 # Mount router
 app.include_router(api)
 

@@ -758,7 +758,13 @@ async def notes_explain_three_ways(payload: models.ExplainThreeWaysRequest, user
 @api.post("/audio-recap/generate")
 async def audio_recap_generate(payload: models.AudioRecapRequest, user=Depends(current_user)):
     s = await _get_set(payload.study_set_id, user["user_id"])
-    script = await ai.audio_recap(s["raw_text"], payload.format, payload.length_minutes)
+    try:
+        script = await ai.audio_recap(s["raw_text"], payload.format, payload.length_minutes)
+    except Exception as e:
+        msg = str(e).lower()
+        if "502" in msg or "bad gateway" in msg or "timeout" in msg or "unavailable" in msg:
+            raise HTTPException(status_code=503, detail="LLM provider temporarily unavailable, please retry.")
+        raise HTTPException(status_code=500, detail=f"Audio recap failed: {str(e)[:120]}")
     doc = {
         "id": f"ar_{uuid.uuid4().hex[:10]}",
         "user_id": user["user_id"],
@@ -817,9 +823,15 @@ async def explainer_generate_endpoint(payload: models.ExplainerRequest, user=Dep
     if not payload.topic and not raw_text:
         raise HTTPException(status_code=400, detail="Provide topic or study_set_id")
 
-    slides = await ai.explainer_generate(
-        payload.topic or "", raw_text, payload.style, payload.length_minutes
-    )
+    try:
+        slides = await ai.explainer_generate(
+            payload.topic or "", raw_text, payload.style, payload.length_minutes
+        )
+    except Exception as e:
+        msg = str(e).lower()
+        if "502" in msg or "bad gateway" in msg or "timeout" in msg or "unavailable" in msg:
+            raise HTTPException(status_code=503, detail="LLM provider temporarily unavailable, please retry.")
+        raise HTTPException(status_code=500, detail=f"Explainer failed: {str(e)[:120]}")
     doc = {
         "id": f"exp_{uuid.uuid4().hex[:10]}",
         "user_id": user["user_id"],

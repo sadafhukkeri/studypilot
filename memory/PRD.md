@@ -57,11 +57,29 @@ Build a full-stack AI-powered education platform called "StudyPilot" — a clone
 - SparkChatPage: added "Snap & Solve" 4th tab with KaTeX rendering
 - NotesPage: added "Explain it 3 ways" floating tooltip on text selection + side panel
 
-## Backlog (P0/P1/P2)
-- P1: Streaming chat replies (currently full-response)
-- P1: True spaced-repetition algorithm based on difficulty taps
-- P2: Reel `force=true` regenerate flag
-- P2: Wellbeing timezone awareness for daily spark reset
-- P2: Saved chat sessions list / resume past sessions
-- P2: Export flashcards to Anki/CSV
-- P2: Share study set with public link
+## v3 — 2026-02 (Audio Recap + Explainer + TTS hardening)
+
+### Bug fixes
+- **Voice Tutor language enforcement**: backend prompt now includes BCP-47 locale (Hindi→hi-IN etc.) and forbids English mid-sentence; frontend uses `tts.js` helper to pick locale-matched voice, rate=0.9, pitch=1.0
+- **Reels animation + audio**: full TikTok-style refactor — typewriter hook, staggered point fade-in, gradient backgrounds (5 rotating), keyboard/wheel/touch swipe, auto-narration on slide change, mute/unmute, progress dots, play-hint overlay
+- **Global TTS cleaner** (`/app/frontend/src/lib/tts.js`) — strips markdown bold/italic/headers/links/code-fences, all emoji ranges, bullet symbols, underscores. Used everywhere `speak()` is called.
+
+### New backend endpoints
+- `POST /api/audio-recap/generate`, `GET /api/audio-recap`, `GET /api/audio-recap/{id}`
+- `POST /api/explainer/generate`, `GET /api/explainer`, `GET /api/explainer/{id}`
+- All wrapped with try/except → 503 on transient LLM gateway errors
+
+### New frontend pages
+- `AudioRecapPage` (`/study-set/:id/audio-recap`) — 4 formats × 6 lengths × 7 voices, Web Speech API playback with auto-advance segments, speed control, transcript with active-segment highlight, script download
+- `AudioRecapOverviewPage` (`/audio-recap`) — gallery of past recaps + "Create New" picker modal
+- `ExplainerPage` (`/explainer`) — Tab toggle (study set / topic) × 3 styles × 4 lengths, animated slide viewer with typewriter title + staggered content, SVG diagram render, autoplay (8s), fullscreen, print-as-PDF, narration via TTS, gallery
+
+### New MongoDB collections
+- `audio_recaps`, `explainers`
+
+### Sidebar
+- Added "Audio Recap" (headphone icon) → `/audio-recap`
+- Added "Explainer" (play-circle icon) → `/explainer`
+
+### StudySetPage tool grid
+- Added 7th card "Audio Recap" → `/study-set/:id/audio-recap`

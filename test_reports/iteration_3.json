@@ -1,0 +1,48 @@
+{
+  "summary": "Validated all 7 NEW v3 endpoints (audio-recap generate/list/get + explainer generate/list/get + voice Hindi locale) against the live backend with a fresh JWT signup. 16/16 pytest cases pass: 4 audio-recap formats (podcast, lecture, audiobook, summary), explainer from study_set_id, explainer from topic only, missing-inputs 400, list/get/404 for both resources, voice Hindi response contains Devanagari, and 2 auth guards. Total runtime ~180s on the green run.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/explainer/generate, POST /api/audio-recap/generate, POST /api/studypilotai/voice",
+        "issue": "All 3 LLM-backed endpoints surface upstream Anthropic/LiteLLM 502 BadGatewayError as a generic 500 (uncaught ChatError → FastAPI default handler). Saw transient 502 from LiteLLM during the first run; tests had to retry 1–2 times. Recommend wrapping the ai.* call in try/except ChatError and returning HTTP 503 with a 'LLM provider temporarily unavailable, please retry' message so clients can distinguish transient gateway errors from real bugs."
+      },
+      {
+        "endpoint": "POST /api/explainer/generate",
+        "issue": "When study_set_id is provided but the set doesn't belong to user (or doesn't exist), the endpoint silently falls back to topic-only path instead of 404. Code does `find_one({id, user_id})` and only sets raw_text if found; if neither study_set nor topic is supplied this raises 400, but a wrong study_set_id with a topic would silently use topic. Consider explicit 404 when study_set_id is given but not found."
+      },
+      {
+        "endpoint": "POST /api/audio-recap/generate",
+        "issue": "No idempotency / cache: every call regenerates a new recap doc even for the same (study_set_id, format, length_minutes). Likely intentional, but consider adding a `cached=true` short-circuit similar to /notes/generate to save LLM cost."
+      }
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_v3_endpoints.py",
+    "/app/test_reports/pytest/pytest_v3_endpoints.xml"
+  ],
+  "action_items": [
+    "Wrap ai.audio_recap / ai.explainer_generate / ai.voice_chat (and all other LLM helpers) in try/except for emergentintegrations.llm.chat.ChatError → return HTTP 503 with friendly 'LLM provider temporarily unavailable' message; currently surfaces as 500 which is misleading.",
+    "Optional: validate study_set_id ownership in /api/explainer/generate and return 404 on mismatch instead of silently falling back to topic.",
+    "Optional: add caching (or `force=true`) to /api/audio-recap/generate to avoid duplicate LLM spend on identical requests."
+  ],
+  "critical_code_review_comments": [
+    "ai.py audio_recap/explainer_generate: no error handling; LiteLLM/Anthropic 502 bubbles up as 500. Same fragility flagged in iteration_2 for snap_solve.",
+    "ai.py voice_chat: LANGUAGE_LOCALES dict only has 7 languages; any other language string falls back to en-US silently while the user-facing system prompt still says 'reply in <language>'. Either reject unsupported languages or document the fallback.",
+    "ai.py explainer_generate: style_map lookup uses style.lower().split()[0]; if the client sends an empty string this raises IndexError. Pydantic Literal already constrains to 'classic'|'story'|'conversation' so it's safe today, but the defensive split is unnecessary and brittle.",
+    "server.py explainer_generate_endpoint: doc['topic'] = payload.topic or slides.get('title', 'Untitled') — slides may not have 'title' if LLM returns malformed JSON; _extract_json would already have raised, but worth asserting structure before insert.",
+    "server.py audio_recap_generate: stores `script_json` in DB but returns `script` in response — inconsistent key naming makes the GET-by-id response shape differ from the create response. Pick one."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_v3_endpoints.py",
+    "/app/test_reports/pytest/pytest_v3_endpoints.xml"
+  ],
+  "success_rate": {"backend": "100% (16/16 v3 tests)", "frontend": "not tested (backend-only request)"},
+  "test_credentials": "Per-run fresh signup: v3+{ts}_{rand}@example.com / TestPass123!",
+  "seed_data_creation": "Per-run: 1 user, 1 study set (Photosynthesis TXT, ~700 chars), 4 audio recaps (podcast/lecture/audiobook/summary, 3min each), 2 explainers (from study_set + from topic, classic 3min). All keyed to throwaway user.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Three pytest files now exist: test_studypilot_api.py (iteration_1, 25 tests), test_new_endpoints.py (iteration_2, 15 tests), and test_v3_endpoints.py (iteration_3, 16 tests). All idempotent, all pass independently. The v3 explainer + voice tests retry up to 3 times on transient 502 from LiteLLM/Anthropic gateway since the upstream provider hiccups occasionally — a single test run can take 3–7 min depending on retry count. Audio-recap tests are sequential (one per format) so they take ~60–90s each; pytest-xdist would help but introduces fixture scope issues with session-scoped auth. Always export REACT_APP_BACKEND_URL when running pytest manually.",
+  "rca of the issue": "First run had 8 failures: 6 explainer + 1 voice + 1 auth-guard. Backend logs showed ChatError: litellm.BadGatewayError 502 from the upstream Anthropic provider — transient, not a code bug. Mitigation: (a) reduced explainer length_minutes from 5 to 3 so each call generates fewer slides/SVG and finishes well within gateway timeout, (b) added 3-attempt retry with 5s sleep on the 3 heaviest LLM endpoints in tests, (c) bumped SHORT_TIMEOUT 30→60s and LONG_TIMEOUT 120→180s for slower preview-gateway days. Re-run was fully green in 179s. Production code path still returns 500 instead of 503 on ChatError — see action items."
+}

@@ -4,6 +4,7 @@ import AppShell from "@/components/AppShell";
 import api from "@/lib/api";
 import { Mic, MicOff, Loader2, Volume2 } from "lucide-react";
 import { toast } from "sonner";
+import { speak, cancelSpeech, pickVoice } from "@/lib/tts";
 
 const LANGUAGES = [
   { code: "auto", label: "Auto-detect", bcp: "en-IN" },
@@ -169,11 +170,9 @@ export default function VoiceTutorPage() {
                     {m.role === "assistant" && (
                       <button
                         onClick={() => {
-                          if (window.speechSynthesis) {
-                            const u = new SpeechSynthesisUtterance(m.message);
-                            u.lang = (LANGUAGES.find((l) => l.code === lang) || LANGUAGES[1]).bcp;
-                            window.speechSynthesis.speak(u);
-                          }
+                          const lc = (LANGUAGES.find((l) => l.code === lang) || LANGUAGES[1]).bcp;
+                          cancelSpeech();
+                          speak(m.message, { lang: lc, rate: 0.9, pitch: 1.0, voice: pickVoice(lc) });
                         }}
                         className="mt-2 inline-flex items-center gap-1 text-xs text-[#00c4cc] hover:underline"
                       >

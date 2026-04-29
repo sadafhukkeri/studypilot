@@ -200,11 +200,27 @@ async def schedule_study_plan(subject: str, exam_date: str, raw_text: str = "") 
 
 
 # ==================== NEW HELPERS ====================
+LANGUAGE_LOCALES = {
+    "english": "en-US",
+    "hindi": "hi-IN",
+    "tamil": "ta-IN",
+    "telugu": "te-IN",
+    "marathi": "mr-IN",
+    "bengali": "bn-IN",
+    "gujarati": "gu-IN",
+}
+
+
 async def voice_chat(raw_text: str, message: str, language: str, session_id: str) -> str:
+    locale = LANGUAGE_LOCALES.get(language.strip().lower(), "en-US")
     system = (
-        f"You are StudyPilot AI, a friendly tutor. Answer the student's spoken question in {language} "
-        f"based ONLY on the provided study material. Keep replies CONVERSATIONAL and concise (under 80 words) "
-        f"so they can be spoken aloud.\n\n=== MATERIAL ===\n{_truncate(raw_text, 30000)}\n=== END ==="
+        f"You are a voice AI tutor for StudyPilot. The student is speaking in {language} (locale {locale}). "
+        f"You MUST reply 100% in {language} only. Do NOT mix English words unless the concept has absolutely "
+        f"no translation — in that case, pronounce the English term using {language} phonetics and immediately "
+        f"explain it in {language}. Never switch to English mid-sentence. "
+        f"Keep replies CONVERSATIONAL and concise (under 80 words) so they can be spoken aloud. "
+        f"Answer ONLY based on the provided study material below.\n\n"
+        f"=== MATERIAL ===\n{_truncate(raw_text, 30000)}\n=== END ==="
     )
     chat = _make_chat(system, session_id=session_id)
     return await chat.send_message(UserMessage(text=message))
@@ -282,3 +298,72 @@ async def explain_three_ways(text: str) -> dict:
     chat = _make_chat(system)
     msg = UserMessage(text=f"Explain this in 3 ways:\n\n{text[:6000]}\n\nJSON only.")
     return _extract_json(await chat.send_message(msg))
+
+
+async def audio_recap(raw_text: str, format_: str, length_minutes: int) -> dict:
+    fmt = format_.lower()
+    if fmt == "podcast":
+        instr = (
+            f"Generate a {length_minutes}-minute educational podcast script. Format as a natural conversation "
+            f"between Host A (asks questions, plays student role) and Host B (explains concepts clearly, expert). "
+            f"Cover ALL key concepts. Engaging transitions. NO stage directions or sound effects."
+        )
+        speakers = "Each segment: speaker is 'A' or 'B'."
+    elif fmt == "lecture":
+        instr = (
+            f"Generate a {length_minutes}-minute university lecture script. Academic tone, "
+            f"clear structure (intro, main sections, conclusion). Single speaker."
+        )
+        speakers = "Each segment: speaker is 'Professor'."
+    elif fmt == "audiobook":
+        instr = (
+            f"Convert this study material into a {length_minutes}-minute audiobook narration. "
+            f"Comprehensive, well-paced, covers all content."
+        )
+        speakers = "Each segment: speaker is 'Narrator'."
+    else:  # summary
+        instr = f"Generate a concise {length_minutes}-minute summary. Cover only the most critical concepts. Direct."
+        speakers = "Each segment: speaker is 'Narrator'."
+
+    target_words = length_minutes * 130
+    system = (
+        f"Output ONLY valid JSON: {{\"title\": str, \"segments\": [{{\"speaker\": str, \"text\": str}}]}}. "
+        f"{speakers} Aim for ~{target_words} total words across segments. Each segment 2-5 sentences."
+    )
+    chat = _make_chat(system)
+    msg = UserMessage(text=f"{instr}\n\nMaterial:\n{_truncate(raw_text, 30000)}\n\nJSON only.")
+    return _extract_json(await chat.send_message(msg))
+
+
+async def explainer_generate(topic: str, raw_text: str, style: str, length_minutes: int) -> dict:
+    style_map = {
+        "classic": "Classic Explainer style: best for technical/complex topics, structured slides, formal academic style.",
+        "story": "Animated Story style: simple visual storytelling, character-driven narrative.",
+        "conversation": "Conversation style: two characters debate/discuss the topic, dialogue format.",
+    }
+    style_instr = style_map.get(style.lower().split()[0] if style else "classic", style_map["classic"])
+    target_words = length_minutes * 120
+    n_slides = max(5, length_minutes * 2)
+
+    system = (
+        "Output ONLY valid JSON with structure: "
+        "{\"title\": str, \"totalSlides\": int, \"slides\": ["
+        "{\"slideNumber\": int, \"title\": str, \"content\": [str], \"speakerNote\": str, "
+        "\"visualType\": \"text\"|\"diagram\"|\"timeline\"|\"comparison\"|\"list\", "
+        "\"svgDiagram\": str|null, \"analogy\": str|null, \"keyTerm\": str|null}], "
+        "\"summary\": str}. "
+        "Rules for svgDiagram: Only when visualType is 'diagram' or 'timeline'. "
+        "viewBox='0 0 400 300'. Use ONLY rect, circle, line, text, path, polygon. "
+        "Colors: #4f6ef7, #00c4cc, #f5a623, #ffffff, #1a1a2a. Font size 12-16px. Simple and clean. "
+        "NO external images or xlink:href."
+    )
+
+    src = topic if topic else _truncate(raw_text, 3000)
+    user_msg = (
+        f"Generate an educational explainer about: {src}\n"
+        f"Style: {style_instr}\n"
+        f"Target length: {length_minutes} minutes (~{target_words} words of narration total across ~{n_slides} slides).\n"
+        f"Speaker notes should sum to ~{target_words} words.\n\nJSON only."
+    )
+    chat = _make_chat(system)
+    return _extract_json(await chat.send_message(UserMessage(text=user_msg)))

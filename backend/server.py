@@ -754,6 +754,110 @@ async def notes_explain_three_ways(payload: models.ExplainThreeWaysRequest, user
     return await ai.explain_three_ways(payload.text)
 
 
+# ==================== AUDIO RECAP ====================
+@api.post("/audio-recap/generate")
+async def audio_recap_generate(payload: models.AudioRecapRequest, user=Depends(current_user)):
+    s = await _get_set(payload.study_set_id, user["user_id"])
+    script = await ai.audio_recap(s["raw_text"], payload.format, payload.length_minutes)
+    doc = {
+        "id": f"ar_{uuid.uuid4().hex[:10]}",
+        "user_id": user["user_id"],
+        "study_set_id": payload.study_set_id,
+        "format": payload.format,
+        "length_minutes": payload.length_minutes,
+        "script_json": script,
+        "voice_config": {"voiceA": payload.voice_a, "voiceB": payload.voice_b},
+        "created_at": _utcnow().isoformat(),
+    }
+    await db.audio_recaps.insert_one(doc)
+    return {
+        "id": doc["id"],
+        "format": doc["format"],
+        "length_minutes": doc["length_minutes"],
+        "script": script,
+        "voice_config": doc["voice_config"],
+    }
+
+
+@api.get("/audio-recap")
+async def audio_recap_list(user=Depends(current_user)):
+    items = await db.audio_recaps.find(
+        {"user_id": user["user_id"]}, {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    set_ids = list({i["study_set_id"] for i in items})
+    sets = await db.study_sets.find(
+        {"id": {"$in": set_ids}}, {"_id": 0, "id": 1, "title": 1}
+    ).to_list(200)
+    title_map = {s["id"]: s["title"] for s in sets}
+    for it in items:
+        it["study_set_title"] = title_map.get(it["study_set_id"], "Unknown")
+    return items
+
+
+@api.get("/audio-recap/{recap_id}")
+async def audio_recap_get(recap_id: str, user=Depends(current_user)):
+    doc = await db.audio_recaps.find_one(
+        {"id": recap_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Not found")
+    return doc
+
+
+# ==================== EXPLAINER ====================
+@api.post("/explainer/generate")
+async def explainer_generate_endpoint(payload: models.ExplainerRequest, user=Depends(current_user)):
+    raw_text = ""
+    if payload.study_set_id:
+        s = await db.study_sets.find_one(
+            {"id": payload.study_set_id, "user_id": user["user_id"]}, {"_id": 0}
+        )
+        if s:
+            raw_text = s["raw_text"]
+    if not payload.topic and not raw_text:
+        raise HTTPException(status_code=400, detail="Provide topic or study_set_id")
+
+    slides = await ai.explainer_generate(
+        payload.topic or "", raw_text, payload.style, payload.length_minutes
+    )
+    doc = {
+        "id": f"exp_{uuid.uuid4().hex[:10]}",
+        "user_id": user["user_id"],
+        "topic": payload.topic or (slides.get("title", "Untitled")),
+        "source_study_set_id": payload.study_set_id,
+        "style": payload.style,
+        "length_minutes": payload.length_minutes,
+        "slides_json": slides,
+        "created_at": _utcnow().isoformat(),
+    }
+    await db.explainers.insert_one(doc)
+    return {
+        "id": doc["id"],
+        "topic": doc["topic"],
+        "style": doc["style"],
+        "length_minutes": doc["length_minutes"],
+        "slides": slides,
+    }
+
+
+@api.get("/explainer")
+async def explainer_list(user=Depends(current_user)):
+    items = await db.explainers.find(
+        {"user_id": user["user_id"]}, {"_id": 0, "slides_json": 0}
+    ).sort("created_at", -1).to_list(100)
+    return items
+
+
+@api.get("/explainer/{exp_id}")
+async def explainer_get(exp_id: str, user=Depends(current_user)):
+    doc = await db.explainers.find_one(
+        {"id": exp_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Not found")
+    return doc
+
+
 # Mount router
 app.include_router(api)
 

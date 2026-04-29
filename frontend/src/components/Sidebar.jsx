@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
-import { Home, Library, MessageCircle, Mic, Gamepad2, Calendar, Heart, Settings, LogOut } from "lucide-react";
+import { Home, Library, MessageCircle, Mic, Headphones, PlayCircle, Gamepad2, Calendar, Heart, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const items = [
@@ -8,6 +8,8 @@ const items = [
   { to: "/study-sets", label: "My Study Sets", icon: Library, testid: "nav-sets" },
   { to: "/studypilotai", label: "StudyPilot AI Chat", icon: MessageCircle, testid: "nav-sparke" },
   { to: "/studypilotai/voice", label: "Voice Tutor", icon: Mic, testid: "nav-voice" },
+  { to: "/audio-recap", label: "Audio Recap", icon: Headphones, testid: "nav-audio-recap" },
+  { to: "/explainer", label: "Explainer", icon: PlayCircle, testid: "nav-explainer" },
   { to: "/arcade", label: "Arcade", icon: Gamepad2, testid: "nav-arcade" },
   { to: "/calendar", label: "Study Calendar", icon: Calendar, testid: "nav-calendar" },
   { to: "/wellbeing", label: "Wellbeing", icon: Heart, testid: "nav-wellbeing" },

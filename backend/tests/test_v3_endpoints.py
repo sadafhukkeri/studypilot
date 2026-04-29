@@ -1,0 +1,281 @@
+"""StudyPilot v3 NEW endpoints regression tests.
+
+Covers:
+- POST /api/audio-recap/generate  (4 formats: podcast, lecture, audiobook, summary)
+- GET  /api/audio-recap
+- GET  /api/audio-recap/{id}
+- POST /api/explainer/generate    (with study_set_id; with topic only)
+- GET  /api/explainer
+- GET  /api/explainer/{id}
+- POST /api/studypilotai/voice    (Hindi locale enforcement)
+
+LLM-backed endpoints get a 120s timeout each.
+"""
+import io
+import os
+import time
+import uuid
+import pytest
+import requests
+
+BASE_URL = os.environ["REACT_APP_BACKEND_URL"].rstrip("/")
+API = f"{BASE_URL}/api"
+
+LONG_TIMEOUT = 180
+SHORT_TIMEOUT = 60
+
+SAMPLE_TEXT = (
+    "Photosynthesis is the biochemical process by which green plants, algae, and certain bacteria "
+    "convert light energy, usually from the Sun, into chemical energy stored in glucose. "
+    "The overall reaction is: 6 CO2 + 6 H2O + light energy -> C6H12O6 + 6 O2. "
+    "Photosynthesis has two stages: the light-dependent reactions which occur in the thylakoid "
+    "membranes and produce ATP and NADPH, and the Calvin cycle which occurs in the stroma and uses "
+    "ATP and NADPH to fix carbon dioxide into glucose. Factors affecting the rate of photosynthesis "
+    "include light intensity, carbon dioxide concentration, temperature, and water availability."
+)
+
+# Devanagari range U+0900 to U+097F
+def _has_devanagari(text: str) -> bool:
+    return any("\u0900" <= ch <= "\u097F" for ch in text)
+
+
+# ---------- session-scoped fixtures ----------
+@pytest.fixture(scope="session")
+def auth():
+    payload = {
+        "email": f"v3+{int(time.time())}_{uuid.uuid4().hex[:6]}@example.com",
+        "password": "TestPass123!",
+        "name": "V3 Tester",
+    }
+    last_err = None
+    for attempt in range(3):
+        try:
+            r = requests.post(f"{API}/auth/signup", json=payload, timeout=SHORT_TIMEOUT)
+            if r.status_code == 200:
+                data = r.json()
+                return {
+                    "headers": {"Authorization": f"Bearer {data['token']}"},
+                    "user_id": data["user"]["user_id"],
+                }
+            last_err = f"{r.status_code} {r.text}"
+        except Exception as e:
+            last_err = str(e)
+        time.sleep(2)
+    pytest.fail(f"signup failed after retries: {last_err}")
+
+
+@pytest.fixture(scope="session")
+def study_set(auth):
+    files = {"file": ("photo.txt", io.BytesIO(SAMPLE_TEXT.encode("utf-8")), "text/plain")}
+    data = {"title": "Photosynthesis V3", "subject": "Biology"}
+    r = requests.post(f"{API}/upload", files=files, data=data, headers=auth["headers"], timeout=LONG_TIMEOUT)
+    assert r.status_code == 200, f"upload failed: {r.status_code} {r.text}"
+    return r.json()
+
+
+# ---------- AUDIO RECAP ----------
+class TestAudioRecap:
+    """All 4 audio recap formats + list + get-by-id."""
+
+    @pytest.fixture(scope="class")
+    def created_ids(self):
+        return {}
+
+    def _generate(self, auth, study_set, fmt: str):
+        r = requests.post(
+            f"{API}/audio-recap/generate",
+            json={
+                "study_set_id": study_set["id"],
+                "format": fmt,
+                "length_minutes": 3,
+                "voice_a": "Neutral",
+                "voice_b": "Female-Warm",
+            },
+            headers=auth["headers"],
+            timeout=LONG_TIMEOUT,
+        )
+        assert r.status_code == 200, f"{fmt} -> {r.status_code} {r.text}"
+        body = r.json()
+        # Top-level keys
+        for k in ("id", "format", "length_minutes", "script", "voice_config"):
+            assert k in body, f"[{fmt}] missing {k} in {list(body.keys())}"
+        assert body["format"] == fmt
+        assert body["length_minutes"] == 3
+        assert body["voice_config"] == {"voiceA": "Neutral", "voiceB": "Female-Warm"}
+        # Script structure
+        script = body["script"]
+        assert isinstance(script, dict)
+        assert "title" in script and isinstance(script["title"], str) and len(script["title"]) > 0
+        assert "segments" in script and isinstance(script["segments"], list) and len(script["segments"]) >= 2
+        for seg in script["segments"]:
+            assert "speaker" in seg and "text" in seg
+            assert isinstance(seg["text"], str) and len(seg["text"]) > 0
+        return body["id"]
+
+    def test_podcast(self, auth, study_set, created_ids):
+        created_ids["podcast"] = self._generate(auth, study_set, "podcast")
+
+    def test_lecture(self, auth, study_set, created_ids):
+        created_ids["lecture"] = self._generate(auth, study_set, "lecture")
+
+    def test_audiobook(self, auth, study_set, created_ids):
+        created_ids["audiobook"] = self._generate(auth, study_set, "audiobook")
+
+    def test_summary(self, auth, study_set, created_ids):
+        created_ids["summary"] = self._generate(auth, study_set, "summary")
+
+    def test_list_recaps(self, auth, study_set, created_ids):
+        # Ensure at least one was generated above
+        assert created_ids, "no recaps generated by prior tests"
+        r = requests.get(f"{API}/audio-recap", headers=auth["headers"], timeout=SHORT_TIMEOUT)
+        assert r.status_code == 200, r.text
+        items = r.json()
+        assert isinstance(items, list) and len(items) >= len(created_ids)
+        first = items[0]
+        for k in ("id", "format", "length_minutes", "voice_config", "study_set_title"):
+            assert k in first, f"missing {k} in list item"
+        assert first["study_set_title"] == study_set["title"]
+
+    def test_get_recap_by_id(self, auth, created_ids):
+        # Use any one we created
+        recap_id = next(iter(created_ids.values()))
+        r = requests.get(f"{API}/audio-recap/{recap_id}", headers=auth["headers"], timeout=SHORT_TIMEOUT)
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["id"] == recap_id
+        assert "script_json" in body
+        assert "segments" in body["script_json"]
+
+    def test_get_recap_404(self, auth):
+        r = requests.get(f"{API}/audio-recap/ar_doesnotexist", headers=auth["headers"], timeout=SHORT_TIMEOUT)
+        assert r.status_code == 404
+
+
+# ---------- EXPLAINER ----------
+class TestExplainer:
+    """Explainer with study_set_id and with topic only + list + get-by-id."""
+
+    @pytest.fixture(scope="class")
+    def created_ids(self):
+        return {}
+
+    def _validate_slides(self, slides: dict):
+        assert isinstance(slides, dict)
+        for k in ("title", "totalSlides", "slides", "summary"):
+            assert k in slides, f"missing {k} in slides: {list(slides.keys())}"
+        assert isinstance(slides["slides"], list) and len(slides["slides"]) >= 3
+        first = slides["slides"][0]
+        for k in ("slideNumber", "title", "content", "speakerNote", "visualType"):
+            assert k in first, f"missing {k} in slide: {list(first.keys())}"
+        assert isinstance(first["content"], list)
+
+    def test_explainer_from_study_set(self, auth, study_set, created_ids):
+        # Retry on transient 502 from LLM gateway
+        for attempt in range(3):
+            r = requests.post(
+                f"{API}/explainer/generate",
+                json={"study_set_id": study_set["id"], "style": "classic", "length_minutes": 3},
+                headers=auth["headers"],
+                timeout=LONG_TIMEOUT,
+            )
+            if r.status_code == 200:
+                break
+            time.sleep(5)
+        assert r.status_code == 200, r.text
+        body = r.json()
+        for k in ("id", "topic", "style", "length_minutes", "slides"):
+            assert k in body, f"missing {k} in {list(body.keys())}"
+        assert body["style"] == "classic"
+        assert body["length_minutes"] == 3
+        self._validate_slides(body["slides"])
+        created_ids["from_set"] = body["id"]
+
+    def test_explainer_from_topic_only(self, auth, created_ids):
+        for attempt in range(3):
+            r = requests.post(
+                f"{API}/explainer/generate",
+                json={"topic": "Photosynthesis", "style": "classic", "length_minutes": 3},
+                headers=auth["headers"],
+                timeout=LONG_TIMEOUT,
+            )
+            if r.status_code == 200:
+                break
+            time.sleep(5)
+        assert r.status_code == 200, r.text
+        body = r.json()
+        for k in ("id", "topic", "style", "length_minutes", "slides"):
+            assert k in body
+        assert body["topic"] == "Photosynthesis"
+        self._validate_slides(body["slides"])
+        created_ids["from_topic"] = body["id"]
+
+    def test_explainer_missing_inputs(self, auth):
+        r = requests.post(
+            f"{API}/explainer/generate",
+            json={"style": "classic", "length_minutes": 5},
+            headers=auth["headers"],
+            timeout=SHORT_TIMEOUT,
+        )
+        assert r.status_code == 400
+
+    def test_list_explainers(self, auth, created_ids):
+        assert created_ids, "no explainers created"
+        r = requests.get(f"{API}/explainer", headers=auth["headers"], timeout=SHORT_TIMEOUT)
+        assert r.status_code == 200, r.text
+        items = r.json()
+        assert isinstance(items, list) and len(items) >= len(created_ids)
+        first = items[0]
+        for k in ("id", "topic", "style", "length_minutes", "created_at"):
+            assert k in first, f"missing {k} in list item"
+        # List must NOT include slides_json (server projects it out)
+        assert "slides_json" not in first
+
+    def test_get_explainer_by_id(self, auth, created_ids):
+        exp_id = created_ids.get("from_topic") or next(iter(created_ids.values()))
+        r = requests.get(f"{API}/explainer/{exp_id}", headers=auth["headers"], timeout=SHORT_TIMEOUT)
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["id"] == exp_id
+        assert "slides_json" in body
+        assert "slides" in body["slides_json"]
+
+    def test_get_explainer_404(self, auth):
+        r = requests.get(f"{API}/explainer/exp_doesnotexist", headers=auth["headers"], timeout=SHORT_TIMEOUT)
+        assert r.status_code == 404
+
+
+# ---------- VOICE LANGUAGE ENFORCEMENT ----------
+class TestVoiceLanguage:
+    def test_voice_hindi_devanagari(self, auth, study_set):
+        for attempt in range(3):
+            r = requests.post(
+                f"{API}/studypilotai/voice",
+                json={
+                    "study_set_id": study_set["id"],
+                    "transcript_user": "What is the main topic?",
+                    "language": "Hindi",
+                    "session_id": f"voice_{uuid.uuid4().hex[:8]}",
+                },
+                headers=auth["headers"],
+                timeout=LONG_TIMEOUT,
+            )
+            if r.status_code == 200:
+                break
+            time.sleep(5)
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["language_used"] == "Hindi"
+        text = body.get("response_text", "")
+        assert isinstance(text, str) and len(text.strip()) > 0, "response_text empty"
+        assert _has_devanagari(text), f"no Devanagari characters in Hindi response: {text[:200]}"
+
+
+# ---------- AUTH GUARDS ----------
+class TestAuthGuards:
+    def test_audio_recap_unauthenticated(self):
+        r = requests.get(f"{API}/audio-recap", timeout=SHORT_TIMEOUT)
+        assert r.status_code == 401
+
+    def test_explainer_unauthenticated(self):
+        r = requests.get(f"{API}/explainer", timeout=SHORT_TIMEOUT)
+        assert r.status_code == 401

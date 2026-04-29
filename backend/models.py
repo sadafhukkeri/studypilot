@@ -156,3 +156,18 @@ class MoodCheckinRequest(BaseModel):
 
 class ExplainThreeWaysRequest(BaseModel):
     text: str
+
+
+class AudioRecapRequest(BaseModel):
+    study_set_id: str
+    format: Literal["podcast", "lecture", "audiobook", "summary"]
+    length_minutes: int = 6
+    voice_a: Optional[str] = "Neutral"
+    voice_b: Optional[str] = "Female-Warm"
+
+
+class ExplainerRequest(BaseModel):
+    study_set_id: Optional[str] = None
+    topic: Optional[str] = ""
+    style: Literal["classic", "story", "conversation"] = "classic"
+    length_minutes: int = 10

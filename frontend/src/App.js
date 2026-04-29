@@ -23,6 +23,9 @@ import SettingsPage from "@/pages/SettingsPage";
 import VoiceTutorPage from "@/pages/VoiceTutorPage";
 import WellbeingPage from "@/pages/WellbeingPage";
 import ReelsPage from "@/pages/ReelsPage";
+import AudioRecapPage from "@/pages/AudioRecapPage";
+import AudioRecapOverviewPage from "@/pages/AudioRecapOverviewPage";
+import ExplainerPage from "@/pages/ExplainerPage";
 
 function AppRouter() {
   const location = useLocation();
@@ -46,6 +49,9 @@ function AppRouter() {
       <Route path="/studypilotai/voice" element={<ProtectedRoute><VoiceTutorPage /></ProtectedRoute>} />
       <Route path="/wellbeing" element={<ProtectedRoute><WellbeingPage /></ProtectedRoute>} />
       <Route path="/study-set/:id/reels" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
+      <Route path="/study-set/:id/audio-recap" element={<ProtectedRoute><AudioRecapPage /></ProtectedRoute>} />
+      <Route path="/audio-recap" element={<ProtectedRoute><AudioRecapOverviewPage /></ProtectedRoute>} />
+      <Route path="/explainer" element={<ProtectedRoute><ExplainerPage /></ProtectedRoute>} />
       <Route path="/arcade" element={<ProtectedRoute><ArcadePage /></ProtectedRoute>} />
       <Route path="/arcade/play/:setId/:mode" element={<ProtectedRoute><ArcadeGamePage /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
